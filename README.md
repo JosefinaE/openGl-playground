@@ -5,7 +5,7 @@
 - cmake
 
 # Build:
-cd build
-cmake ..
-cmake --build .
-./a.out
+cd build  
+cmake ..  
+cmake --build .  
+./a.out  

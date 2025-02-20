@@ -1,73 +1,121 @@
 #include <app.h>
+
+#include <common/triangleVAO.cpp>
 #include <iostream>
 
-App::App(int w, int h)
-{
+App::App(int w, int h) {
     SCREEN_WIDTH = w;
     SCREEN_HEIGHT = h;
 }
 
-bool App::run()
-{
-    // Fill the surface white
-    SDL_FillRect(gScreenSurface, NULL, SDL_MapRGB(gScreenSurface->format, 0x0F, 0x00, 0x00));
-    // Update the surface
-    SDL_UpdateWindowSurface(gWindow);
-    // Hack to get window to stay up
-    gContext = SDL_GL_CreateContext(gWindow);
-    if (!gladLoadGLLoader(SDL_GL_GetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
+bool App::run() {
+    SDL_Event e;
+    while (SDL_PollEvent(&e)) {
+        handleEvent(e);
+    }
+    bool drawn = draw();
+    if (!drawn) {
+        std::cout << "Screen could not be drawn" << std::endl;
+        quit = true;
+    }
+
+    return !quit;
+}
+
+bool App::draw() {
+    
+    glUseProgram(gShader);
+    glBindVertexArray(gVAO);
+    glDrawArrays(GL_TRIANGLES,0,3);
+    // tell openGL size of rendering window
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    // glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state-setting function
+    // glClear(GL_COLOR_BUFFER_BIT); // state-using function
+    SDL_GL_SwapWindow(gWindow);
+
+    return true;
+}
+
+bool App::handleEvent(SDL_Event e) {
+    switch (e.type) {
+        case SDL_QUIT:
+            quit = true;
+        case SDL_WINDOWEVENT:
+            handleWindowEvent(e.window);
+    }
+
+    return true;
+}
+
+void App::handleWindowEvent(SDL_WindowEvent e) {
+    switch (e.event) {
+        // case SDL_WINDOWEVENT_SIZE_CHANGED:
+        // case SDL_WINDOWEVENT_MAXIMIZED:
+        case SDL_WINDOWEVENT_RESIZED: {
+            SCREEN_WIDTH = e.data1;
+            SCREEN_HEIGHT = e.data2;
+        }
+    }
+}
+
+bool App::init() {
+    bool success = initOpenGL();
+    if (!success) {
         return false;
     }
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-    SDL_Event e;
-    bool quit = false;
-    while (quit == false)
-    {
-        while (SDL_PollEvent(&e))
-        {
-            if (e.type == SDL_QUIT)
-                quit = true;
-        }
+    gShader = loadShaderProgram();
+    if(gShader==0){
+        return false;
+    }
+    gVAO = loadVAO();
+    if(gVAO==0){
+        return false;
     }
     return true;
 }
 
-bool App::init()
-{
-    bool success = true;
-
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
-    {
-        std::cout << "SDL could not initialize! SDL_Error" << SDL_GetError() << std::endl;
-        return false;
-    }
+bool App::initOpenGL() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cout << "SDL could not initialize! SDL_Error" << SDL_GetError() << std::endl;
+        return false;
+    }
     // Create window
-    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-    if (gWindow == NULL)
-    {
-        std::cout << "Window could not be created! SDL_Error" << SDL_GetError() << std::endl;
+    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                               SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    if (!gWindow) {
+        std::cout << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
         SDL_Quit();
         return false;
     }
-    // Get window surface
-    gScreenSurface = SDL_GetWindowSurface(gWindow);
-    return success;
+    //  create openGL context
+    gContext = SDL_GL_CreateContext(gWindow);
+    if (!gContext) {
+        std::cout << "OpenGL Context could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+        SDL_DestroyWindow(gWindow);
+        gWindow = NULL;
+        SDL_Quit();
+        return false;
+    }
+    // use glad to load the OpenGL function pointers
+    if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
+        std::cout << "Failed to initialize GLAD" << std::endl;
+        close();
+        return false;
+    }
+    return true;
 }
 
-bool App::close()
-{
-    SDL_FreeSurface(gScreenSurface);
+
+bool App::close() {
     SDL_DestroyWindow(gWindow);
-    gScreenSurface = NULL;
+    SDL_GL_DeleteContext(gContext);
+    gContext = NULL;
     gWindow = NULL;
     SDL_Quit();
     return true;

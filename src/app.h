@@ -1,18 +1,32 @@
 #pragma once
-#include <glad/glad.h>
 #include <SDL2/SDL.h>
+#include <glad/glad.h>
 
-class App
-{
-public:
+
+class App {
+   public:
+    App(int w, int h);
+    /* Initializes de application libraries and constants */
+    bool init();
+    /* Runs the core logic */
+    bool run();
+    /* Safely closes the application */
+    bool close();
+
+   private:
+    int max_fps = 120;
+    int SCREEN_WIDTH, SCREEN_HEIGHT;
+    unsigned int gShader;
+    unsigned int gVAO;
+    bool quit = false;
     SDL_Window *gWindow = NULL;
     SDL_Surface *gScreenSurface = NULL;
     SDL_GLContext gContext = NULL;
-    App(int w, int h);
-    bool init();
-    bool run();
-    bool close();
-
-private:
-    int SCREEN_WIDTH, SCREEN_HEIGHT;
+    /* Draws to the screen */
+    bool draw();
+    /* Handles SDL Events */
+    bool handleEvent(SDL_Event e);
+    /* Handles an SDL Event */
+    void handleWindowEvent(SDL_WindowEvent e);
+    bool initOpenGL();
 };
