@@ -23,12 +23,14 @@ bool App::run() {
 }
 
 bool App::draw() {
-    
-    glUseProgram(gShader);
-    glBindVertexArray(gVAO);
-    glDrawArrays(GL_TRIANGLES,0,3);
-    // tell openGL size of rendering window
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    glUseProgram(gShaders[0]);
+    glBindVertexArray(gVAOs[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glUseProgram(gShaders[1]);
+    glBindVertexArray(gVAOs[1]);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0); // for polygon VAO
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);  // tell openGL size of rendering window
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state-setting function
     // glClear(GL_COLOR_BUFFER_BIT); // state-using function
     SDL_GL_SwapWindow(gWindow);
@@ -63,14 +65,24 @@ bool App::init() {
     if (!success) {
         return false;
     }
-    gShader = loadShaderProgram();
-    if(gShader==0){
+    gShaders[0] = loadShaderProgram("../shaders/hello.vert", "../shaders/hello.frag");
+    gShaders[1] = loadShaderProgram("../shaders/hello.vert", "../shaders/trig2.frag");
+    std::array<unsigned int, 2> trig1 = loadTriangleVAO({-0.9f, -0.9f, 0.0f,
+                                                        -0.9f, 0.0f, 0.0f,
+                                                        -0.45f, 0.0f, 0.0f});
+
+    std::array<unsigned int, 2> trig2 = loadTriangleVAO({-0.5f, -0.5f, 0.0f,
+                                                        0.5f, -0.5f, 0.0f,
+                                                        0.0f, 0.5f, 0.0f});
+    gVAOs[0] = trig1[0];
+    gVBOs[0] = trig1[1];
+    gVAOs[1] = trig2[0];
+    gVBOs[1] = trig2[1];
+
+    if (gVAOs[0] == 0) {
         return false;
     }
-    gVAO = loadVAO();
-    if(gVAO==0){
-        return false;
-    }
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe mode
     return true;
 }
 
@@ -111,8 +123,11 @@ bool App::initOpenGL() {
     return true;
 }
 
-
 bool App::close() {
+    glDeleteVertexArrays(gVAOs.size(),gVAOs.data());
+    glDeleteBuffers(gVBOs.size(),gVBOs.data());
+    glDeleteProgram(gShaders[0]);
+    glDeleteProgram(gShaders[1]);
     SDL_DestroyWindow(gWindow);
     SDL_GL_DeleteContext(gContext);
     gContext = NULL;

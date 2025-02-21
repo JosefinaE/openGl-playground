@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
+#include <array>
 
 
 class App {
@@ -16,8 +17,9 @@ class App {
    private:
     int max_fps = 120;
     int SCREEN_WIDTH, SCREEN_HEIGHT;
-    unsigned int gShader;
-    unsigned int gVAO;
+    std::array<unsigned int, 2> gShaders;
+    std::array<unsigned int, 2> gVAOs;
+    std::array<unsigned int, 2> gVBOs;
     bool quit = false;
     SDL_Window *gWindow = NULL;
     SDL_Surface *gScreenSurface = NULL;
