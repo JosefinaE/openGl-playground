@@ -6,6 +6,5 @@
 
 # Build:
 cd build  
-cmake ..  
+cmake .. -DSDL2_DIR=<sdl2 cmake folder>
 cmake --build .  
-./a.out  

@@ -1,6 +1,8 @@
+find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
+find_program(CMAKE_C_COMPILER NAMES $ENV{CXX} gcc PATHS ENV PATH NO_DEFAULT_PATH)
 cmake_minimum_required(VERSION 3.7)
 project(hello_world_sdl2)
-set(SDL2_DIR lib/SDL2-2.30.3/cmake)
+
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS})
 set(SOURCE_DIR src)
