@@ -4,7 +4,7 @@
 #include <common/loadShaders.cpp>
 #include <iostream>
 
-std::array<unsigned int, 2> loadTriangleVAO(std::array<float, 9> vertices) {
+std::array<unsigned int, 2> loadTriangleVAO(std::array<float, 9 * 2> vertices) {
     unsigned int VBO;  // Vertex Buffer Objects, stores vertices on GPU memory
     unsigned int VAO;  // Vertex Array Objects, stores state configuration
     glGenVertexArrays(1, &VAO);
@@ -12,11 +12,19 @@ std::array<unsigned int, 2> loadTriangleVAO(std::array<float, 9> vertices) {
 
     glBindVertexArray(VAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // now buffer calls (on the GL_ARRAY_BUFFER target) will act on VBO
+    // TODO: Aprender de buffers inmutables
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);                                                // now buffer calls (on the GL_ARRAY_BUFFER target) will act on VBO
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(), GL_STATIC_DRAW);  // copy to buffer
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);  // it operates on the bound VBO
-    glEnableVertexAttribArray(0); // unbind VAO
+    // 0 -> position in shader (location = 0)
+    // 3 -> number of values (vec3)
+    // 6*sizeof(float) -> stride, separation between consecutive vertices, xyzrgb
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);  // it operates on the bound VBO
+    glEnableVertexAttribArray(0);
+    // 1 -> location = 1
+    // last parameter:  offset, we start in the 'color' part of the array
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
     return {VAO, VBO};
 }
 

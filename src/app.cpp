@@ -3,34 +3,57 @@
 #include <common/triangleVAO.cpp>
 #include <iostream>
 
+int xMouse, yMouse = 0;
+const int FPS = 60;
+const int frameDelay = 1000 / FPS;
+
+Uint32 prevTick, tick;
 App::App(int w, int h) {
     SCREEN_WIDTH = w;
     SCREEN_HEIGHT = h;
 }
 
 bool App::run() {
-    SDL_Event e;
+    tick = SDL_GetTicks();
+    Uint32 delta = tick - prevTick;
+
+    SDL_Event e;  // TODO: test if event should be inside capped portion
     while (SDL_PollEvent(&e)) {
         handleEvent(e);
     }
-    bool drawn = draw();
-    if (!drawn) {
-        std::cout << "Screen could not be drawn" << std::endl;
-        quit = true;
+
+    if (delta > frameDelay) {
+        bool drawn = draw();
+
+        if (!drawn) {
+            std::cout << "Screen could not be drawn" << std::endl;
+            quit = true;
+        }
+        prevTick = tick;
     }
 
     return !quit;
 }
 
 bool App::draw() {
-    glUseProgram(gShaders[0]);
-    glBindVertexArray(gVAOs[0]);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glUseProgram(gShaders[1]);
-    glBindVertexArray(gVAOs[1]);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0); // for polygon VAO
     glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);  // tell openGL size of rendering window
+
+    int mousePosLocation = glGetUniformLocation(gShaders[1], "mousePos");
+    int tickLocation = glGetUniformLocation(gShaders[1], "time");
+    float xMouseNormalized = (float)xMouse / (float)SCREEN_WIDTH;
+    float yMouseNormalized = (float)yMouse / (float)SCREEN_HEIGHT;
+    // trig 1
+    glBindVertexArray(gVAOs[0]);
+    glUseProgram(gShaders[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    // trig 2
+    glBindVertexArray(gVAOs[1]);
+    glUseProgram(gShaders[1]);
+    glUniform2f(mousePosLocation, xMouseNormalized, yMouseNormalized);
+    glUniform1i(tickLocation, tick);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);  // unbind vao
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void*)0); // for polygon VAO
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // state-setting function
     // glClear(GL_COLOR_BUFFER_BIT); // state-using function
     SDL_GL_SwapWindow(gWindow);
@@ -44,6 +67,8 @@ bool App::handleEvent(SDL_Event e) {
             quit = true;
         case SDL_WINDOWEVENT:
             handleWindowEvent(e.window);
+        case SDL_MOUSEMOTION:
+            SDL_GetGlobalMouseState(&xMouse, &yMouse);
     }
 
     return true;
@@ -62,18 +87,25 @@ void App::handleWindowEvent(SDL_WindowEvent e) {
 
 bool App::init() {
     bool success = initOpenGL();
+    prevTick = SDL_GetTicks();
     if (!success) {
         return false;
     }
     gShaders[0] = loadShaderProgram("../shaders/hello.vert", "../shaders/hello.frag");
     gShaders[1] = loadShaderProgram("../shaders/hello.vert", "../shaders/trig2.frag");
-    std::array<unsigned int, 2> trig1 = loadTriangleVAO({-0.9f, -0.9f, 0.0f,
-                                                        -0.9f, 0.0f, 0.0f,
-                                                        -0.45f, 0.0f, 0.0f});
+    std::array<unsigned int, 2> trig1 = loadTriangleVAO({
+        // positions         // colors
+        -0.9f, -0.9f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom right
+        -0.9f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,   // bottom left
+        -0.45f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f   // top
+    });
 
-    std::array<unsigned int, 2> trig2 = loadTriangleVAO({-0.5f, -0.5f, 0.0f,
-                                                        0.5f, -0.5f, 0.0f,
-                                                        0.0f, 0.5f, 0.0f});
+    std::array<unsigned int, 2> trig2 = loadTriangleVAO({
+        // positions         // colors
+        0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f,   // bottom right
+        -0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.0f,  // bottom left
+        0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0f     // top
+    });
     gVAOs[0] = trig1[0];
     gVBOs[0] = trig1[1];
     gVAOs[1] = trig2[0];
@@ -98,7 +130,7 @@ bool App::initOpenGL() {
         return false;
     }
     // Create window
-    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+    gWindow = SDL_CreateWindow("Mi App :3", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                                SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!gWindow) {
         std::cout << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
@@ -124,8 +156,8 @@ bool App::initOpenGL() {
 }
 
 bool App::close() {
-    glDeleteVertexArrays(gVAOs.size(),gVAOs.data());
-    glDeleteBuffers(gVBOs.size(),gVBOs.data());
+    glDeleteVertexArrays(gVAOs.size(), gVAOs.data());
+    glDeleteBuffers(gVBOs.size(), gVBOs.data());
     glDeleteProgram(gShaders[0]);
     glDeleteProgram(gShaders[1]);
     SDL_DestroyWindow(gWindow);
